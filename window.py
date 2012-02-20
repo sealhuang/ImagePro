@@ -4,12 +4,8 @@
 
 Module PyQt4, numpy, nibabel and qimage2ndarray are required.
 
-Author: Lijie Huang@BNU
-Email: huanglijie.seal@gmail.com
+Author: Lijie Huang
 Last modified: 2012-02-18
----------------------------
-- All copyroghts reserved -
----------------------------
 
 ATTENTION:
     Stop thinking, man! just code it! Done is better than perfect.
@@ -97,6 +93,31 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(scrollarea)
         self.resize(self.centralWidget().widget().size())
 
+    def remove_activation(self):
+        self.open_active_act.setEnabled(True)
+        self.remove_active_act.setEnabled(False)
+        for index in range(len(self.label_list)):
+            self.label_list[index].remove_active()
+
+    def close_display(self):
+        # change button status
+        self.open_template_act.setEnabled(True)
+        self.open_active_act.setEnabled(False)
+        self.save_mask_act.setEnabled(False)
+        self.close_act.setEnabled(False)
+        self.remove_active_act.setEnabled(False)
+        self.erase_act.setEnabled(False)
+        self.pen_status = False
+
+        self.label_list = []
+        self.template = None
+        self.activation = None
+        self.scale_factor = 0
+
+        self.removeToolBar(self.toolbar)
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+
     def open_template(self):
         """Open a dialog window and select the template file"""
         template_dir = r'/usr/local/neurosoft/fsl/data/standard'
@@ -115,9 +136,10 @@ class MainWindow(QMainWindow):
             else:
                 self.scale_factor = 1.0
                 # change the button status
+                self.open_template_act.setEnabled(False)
                 self.open_active_act.setEnabled(True)
                 self.save_mask_act.setEnabled(True)
-                self.open_template_act.setEnabled(False)
+                self.close_act.setEnabled(True)
                 self.erase_act.setEnabled(True)
                 self.pen_status = True
                 self.add_toolbar()
@@ -147,6 +169,7 @@ class MainWindow(QMainWindow):
                                             'Data dimension does not match.')
                 else:
                     self.open_active_act.setEnabled(False)
+                    self.remove_active_act.setEnabled(True)
                     self.overlap_act.setEnabled(True)
                     self.activation = img
                     self.load_data()
@@ -183,46 +206,62 @@ class MainWindow(QMainWindow):
     def create_action(self):
         """Create actions"""
         # open template action
-        self.open_template_act = QAction(self.tr("Open &Standard Volume"), self)
-        self.open_template_act.setShortcut(self.tr("Ctrl+S"))
+        self.open_template_act = QAction(self.tr("&Open standard"), self)
+        self.open_template_act.setShortcut(self.tr("Ctrl+O"))
         self.connect(self.open_template_act, 
                      SIGNAL("triggered()"),
                      self.open_template)
 
         # open activation map action
-        self.open_active_act = QAction(self.tr("Open &Volume"), self)
-        self.open_active_act.setShortcut(self.tr("Ctrl+V"))
+        self.open_active_act = QAction(self.tr("&Add..."), self)
+        self.open_active_act.setShortcut(self.tr("Ctrl+A"))
         self.open_active_act.setEnabled(False)
         self.connect(self.open_active_act,
                      SIGNAL("triggered()"),
                      self.open_activation)
+        
+        # remove overlay action
+        self.remove_active_act = QAction(self.tr("&Remove..."), self)
+        self.remove_active_act.setShortcut(self.tr("Ctrl+R"))
+        self.remove_active_act.setEnabled(False)
+        self.connect(self.remove_active_act,
+                     SIGNAL("triggered()"),
+                     self.remove_activation)
 
         # save mask action
-        self.save_mask_act = QAction(self.tr("&Save Mask"), self)
+        self.save_mask_act = QAction(self.tr("&Save mask"), self)
         self.save_mask_act.setShortcut(self.tr("Ctrl+S"))
         self.save_mask_act.setEnabled(False)
         self.connect(self.save_mask_act,
                      SIGNAL("triggered()"),
                      self.save_mask)
 
-        # self-description action
-        self.about_act = QAction(self.tr("&About"), self)
-        self.connect(self.about_act, SIGNAL("triggered()"), self.about)
-
-        # about Qt action
-        self.about_qt_act = QAction(self.tr("About &Qt"), self)
-        self.connect(self.about_qt_act,
+        # close display action
+        self.close_act = QAction(self.tr("Close"), self)
+        self.close_act.setShortcut(self.tr("Ctrl+W"))
+        self.close_act.setEnabled(False)
+        self.connect(self.close_act,
                      SIGNAL("triggered()"),
-                     qApp, 
-                     SLOT("aboutQt()"))
-
+                     self.close_display)
+        
         # exit action
-        self.exit_act = QAction(self.tr("E&xit"), self)
+        self.exit_act = QAction(self.tr("&Quit"), self)
         self.exit_act.setShortcut(self.tr("Ctrl+Q"))
         self.connect(self.exit_act,
                      SIGNAL("triggered()"),
                      self,
                      SLOT("close()"))
+        
+        # self-description action
+        self.about_act = QAction(self.tr("About"), self)
+        self.connect(self.about_act, SIGNAL("triggered()"), self.about)
+
+        # about Qt action
+        self.about_qt_act = QAction(self.tr("About Qt"), self)
+        self.connect(self.about_qt_act,
+                     SIGNAL("triggered()"),
+                     qApp, 
+                     SLOT("aboutQt()"))
 
         # select pen action
         self.pen_act = QAction(self.tr("pen"), self)
@@ -267,8 +306,10 @@ class MainWindow(QMainWindow):
         self.file_menu = self.menuBar().addMenu(self.tr("&File"))
         self.file_menu.addAction(self.open_template_act)
         self.file_menu.addAction(self.open_active_act)
+        self.file_menu.addAction(self.remove_active_act)
         self.file_menu.addAction(self.save_mask_act)
         self.file_menu.addSeparator()
+        self.file_menu.addAction(self.close_act)
         self.file_menu.addAction(self.exit_act)
 
         # menu Help
@@ -287,15 +328,15 @@ class MainWindow(QMainWindow):
         self.spinbox.setValue(100)
         self.connect(self.spinbox, SIGNAL('valueChanged(int)'),
                      self.refresh_display)
-
+        
         # Add a toolbar
-        toolbar = QToolBar()
+        self.toolbar = QToolBar()
         # functional buttons list
-        toolbar.addWidget(self.spinbox)
-        toolbar.addAction(self.pen_act)
-        toolbar.addAction(self.erase_act)
-        toolbar.addAction(self.overlap_act)
-        self.addToolBar(toolbar)
+        self.toolbar.addWidget(self.spinbox)
+        self.toolbar.addAction(self.pen_act)
+        self.toolbar.addAction(self.erase_act)
+        self.toolbar.addAction(self.overlap_act)
+        self.addToolBar(self.toolbar)
 
     def refresh_display(self, event):
         """Refresh display as scale_factor changing"""
@@ -328,6 +369,10 @@ class ImageLabel(QLabel):
         self.activation = np.abs(np.subtract(self.activation, 1))
         self.hasActivation = True
 
+    def remove_active(self):
+        self.activation = None
+        self.hasActivation = False
+    
     def overlap_active_mask(self):
         if self.hasActivation:
             temp1 = np.abs(np.subtract(self.activation, 1))
