@@ -12,7 +12,7 @@ Last modified: 2012-02-01
 
 """
 from PyQt4.QtGui import QApplication
-import nibabel.nifti1 as nifti
+#import nibabel.nifti1 as nifti
 
 import window
 

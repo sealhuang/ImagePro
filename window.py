@@ -1,11 +1,12 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
-"""Implementation of several pyqt4 GUI classes for 'ROI creator'.
+"""Implementation of several pyqt4 GUI classes for ImagePro.
 
-Module PyQt4, numpy, nibabel and qimage2ndarray are required.
+Module PyQt4, numpy and qimage2ndarray are required.
 
-Author: Lijie Huang
-Last modified: 2012-02-18
+Author: Lijie Huang @BNU
+Email: huanglijie.seal@gmail.com
+Last modified: 2012-02-20
 
 ATTENTION:
     Stop thinking, man! just code it! Done is better than perfect.
@@ -17,13 +18,12 @@ import sys
 import numpy as np
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-import nibabel.nifti1 as nifti
 
-from qimage2ndarray import gray2qimage
+#from qimage2ndarray import gray2qimage
 
 class MainWindow(QMainWindow):
-    """Class MainWindow provides basic dataset and methods for storing and building
-    a GUI window.
+    """Class MainWindow provides basic dataset and methods for storing and
+    building a GUI window.
 
     Example:
     --------
@@ -41,17 +41,16 @@ class MainWindow(QMainWindow):
         # Inherited from QMainWindow
         super(MainWindow, self).__init__(parent)
         # set window title
-        self.setWindowTitle('ROI Creator')
+        self.setWindowTitle('ImagePro')
         # set window icon
         #self.setWindowIcon()
         self.setSizePolicy(QSizePolicy.Ignored,
                            QSizePolicy.Ignored)
         self.resize(500, 400)
 
-        self.template = None
-        self.activation = None
+        self.image = None
         self.scale_factor = 0
-        self.label_list = []
+        self.label = None
         self.pen_status = False
 
         self.create_action()
@@ -128,7 +127,8 @@ class MainWindow(QMainWindow):
                                         'Nifti files (*.nii.gz)')
         if not template_name.isEmpty():
             try:
-                img = nifti.load(str(template_name))
+                #img = nifti.load(str(template_name))
+                pass
             except:
                 QMessageBox.information(self,
                                         'ROI Creator',
@@ -157,7 +157,8 @@ class MainWindow(QMainWindow):
 
         if not active_name.isEmpty():
             try:
-                img = nifti.load(str(active_name))
+                pass
+                #img = nifti.load(str(active_name))
             except:
                 QMessageBox.information(self,
                                         'ROI Creator',
