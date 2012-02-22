@@ -57,46 +57,22 @@ class MainWindow(QMainWindow):
         self.create_menus()
 
     def load_data(self):
-        """Load template and activation map"""
-        data = self.template.get_data()
-        if not self.activation:
-            for index in range(data.shape[2]):
-                label_tmp = ImageLabel(index, data[:, :, index], data.max())
-                self.label_list.append(label_tmp)
-        else:
-            active = self.activation.get_data()
-            active = abs(active)
-            for index in range(len(self.label_list)):
-                self.label_list[index].load_active(active[:, :, index])
+        """Load image"""
+        pass
 
-    def display_data(self):
-        """Create several labels and display each frame"""
-        central_widget = QWidget(self)
+    def display_image(self):
+        """display an image"""
+        # to be changed
+        central_widget = ImageLabel(self)
         central_widget.setSizePolicy(QSizePolicy.Ignored,
                                      QSizePolicy.Ignored)
-        gridlayout = QGridLayout()
-        central_widget.setLayout(gridlayout)
-
-        for index in range(len(self.label_list)):
-            row_index = index / 10
-            col_index = index % 10
-
-            self.label_list[index].disp_image(scaler = self.scale_factor)
-            central_widget.layout().addWidget(self.label_list[index],
-                                              row_index,
-                                              col_index)
+        #central_widget.
 
         scrollarea = QScrollArea()
         scrollarea.setBackgroundRole(QPalette.Dark)
         scrollarea.setWidget(central_widget)
         self.setCentralWidget(scrollarea)
         self.resize(self.centralWidget().widget().size())
-
-    def remove_activation(self):
-        self.open_active_act.setEnabled(True)
-        self.remove_active_act.setEnabled(False)
-        for index in range(len(self.label_list)):
-            self.label_list[index].remove_active()
 
     def close_display(self):
         # change button status
@@ -117,91 +93,45 @@ class MainWindow(QMainWindow):
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
-    def open_template(self):
-        """Open a dialog window and select the template file"""
-        template_dir = r'/usr/local/neurosoft/fsl/data/standard'
-        template_name = QFileDialog.getOpenFileName(
-                                        self,
-                                        'Open Template File',
-                                        template_dir,
-                                        'Nifti files (*.nii.gz)')
-        if not template_name.isEmpty():
+    def select_image(self):
+        """Open a dialog window and select a image file"""
+        image_name = QFileDialog.getOpenFileName(self,
+                                                 'Select an image',
+                                                 QDir.currentPath())
+        if not image_name.isEmpty():
             try:
-                #img = nifti.load(str(template_name))
-                pass
+                # to be checked
+                self.image = QImage(image_name)
             except:
                 QMessageBox.information(self,
-                                        'ROI Creator',
-                                        'Cannot load ' + template_name + '.')
+                                        'ImagePro',
+                                        'Cannot load ' + image_name + '.')
             else:
                 self.scale_factor = 1.0
                 # change the button status
-                self.open_template_act.setEnabled(False)
-                self.open_active_act.setEnabled(True)
+                self.select_image_act.setEnabled(False)
                 self.save_mask_act.setEnabled(True)
                 self.close_act.setEnabled(True)
                 self.erase_act.setEnabled(True)
                 self.pen_status = True
                 self.add_toolbar()
-                # load template file
-                self.template = img
+                # load iamge file
                 self.load_data()
                 self.display_data()
                 
-    def open_activation(self):
-        """Open a dialog and select activation map"""
-        active_name = QFileDialog.getOpenFileName(self,
-                                                  'Open Activation File',
-                                                  QDir.currentPath(),
-                                                  'Nifti files (*.nii.gz)')
-
-        if not active_name.isEmpty():
-            try:
-                pass
-                #img = nifti.load(str(active_name))
-            except:
-                QMessageBox.information(self,
-                                        'ROI Creator',
-                                        'Cannot load ' + active_name + '.')
-            else:
-                if not img.shape == self.template.shape:
-                    QMessageBox.information(self,
-                                            'ROI Creator',
-                                            'Data dimension does not match.')
-                else:
-                    self.open_active_act.setEnabled(False)
-                    self.remove_active_act.setEnabled(True)
-                    self.overlap_act.setEnabled(True)
-                    self.activation = img
-                    self.load_data()
-                    self.display_data()
-
     def about(self):
         """Self-description"""
         QMessageBox.about(self,
-                          self.tr("About ROI Creator"),
-                          self.tr("<p>The <b>ROI Creator</b> could draw ROI "
-                             "manually.</p>"))
+                          self.tr("About ImageePro"),
+                          self.tr("<p>The <b>ImagePro</b> could draw ROI "
+                                  "manually.</p>"))
 
     def save_mask(self):
-        """Save mask as a nifti file"""
+        """Save mask"""
         mask_path = QFileDialog.getSaveFileName(self,
                                                 'Save mask file',
-                                                QDir.currentPath(),
-                                                'Nifti files (*.nii.gz)')
+                                                QDir.currentPath())
         if not mask_path.isEmpty():
-            mask_img = self.template
-            data = mask_img.get_data()
-            for index in range(len(self.label_list)):
-                temp = self.label_list[index].mask
-                temp = np.abs(np.subtract(temp, 1))
-                temp = np.rot90(np.rot90(np.rot90(temp)))
-                data[:, :, index] = temp
-            header = mask_img.get_header()
-            header['cal_max'] = 1
-            header['cal_min'] = 0
-            mask_img._data.header = header
-            nifti.save(mask_img, str(mask_path))
             print 'OK'
         
     def create_action(self):
