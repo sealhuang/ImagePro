@@ -6,7 +6,6 @@ Module PyQt4, numpy and qimage2ndarray are required.
 
 Author: Lijie Huang @BNU
 Email: huanglijie.seal@gmail.com
-Last modified: 2012-02-20
 
 ATTENTION:
     Stop thinking, man! just code it! Done is better than perfect.
@@ -15,11 +14,8 @@ ATTENTION:
 
 import sys
 
-import numpy as np
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-
-#from qimage2ndarray import gray2qimage
 
 class MainWindow(QMainWindow):
     """Class MainWindow provides basic dataset and methods for storing and
@@ -40,149 +36,125 @@ class MainWindow(QMainWindow):
         """Initalize an instance of MainWindow"""
         # Inherited from QMainWindow
         super(MainWindow, self).__init__(parent)
+
+        # initial a label for displaying image
+        self.image_label = QLabel()
+        self.image_label.setBackgroundRole(QPalette.Base)
+        self.image_label.setSizePolicy(QSizePolicy.Ignored,
+                                       QSizePolicy.Ignored)
+        self.image_label.setScaledContents(True)
+
+        # initial a scroll area
+        self.scrollarea = QScrollArea()
+        self.scrollarea.setBackgroundRole(QPalette.Dark)
+        self.scrollarea.setWidget(self.image_label)
+
         # set window title
         self.setWindowTitle('ImagePro')
         # set window icon
         #self.setWindowIcon()
-        self.setSizePolicy(QSizePolicy.Ignored,
-                           QSizePolicy.Ignored)
+        self.setCentralWidget(self.scrollarea)
         self.resize(500, 400)
-
-        self.image = None
+        
+        # image zoom-in factor
         self.scale_factor = 0
-        self.label = None
-        self.pen_status = False
 
-        self.create_action()
+        self.create_actions()
         self.create_menus()
 
-    def load_data(self):
-        """Load image"""
-        pass
-
-    def display_image(self):
-        """display an image"""
-        # to be changed
-        central_widget = ImageLabel(self)
-        central_widget.setSizePolicy(QSizePolicy.Ignored,
-                                     QSizePolicy.Ignored)
-        #central_widget.
-
-        scrollarea = QScrollArea()
-        scrollarea.setBackgroundRole(QPalette.Dark)
-        scrollarea.setWidget(central_widget)
-        self.setCentralWidget(scrollarea)
-        self.resize(self.centralWidget().widget().size())
-
-    def close_display(self):
-        # change button status
-        self.open_template_act.setEnabled(True)
-        self.open_active_act.setEnabled(False)
-        self.save_mask_act.setEnabled(False)
-        self.close_act.setEnabled(False)
-        self.remove_active_act.setEnabled(False)
-        self.erase_act.setEnabled(False)
-        self.pen_status = False
-
-        self.label_list = []
-        self.template = None
-        self.activation = None
-        self.scale_factor = 0
-
-        self.removeToolBar(self.toolbar)
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
-
-    def select_image(self):
+    def open(self):
         """Open a dialog window and select a image file"""
         image_name = QFileDialog.getOpenFileName(self,
                                                  'Select an image',
                                                  QDir.currentPath())
         if not image_name.isEmpty():
             try:
-                # to be checked
-                self.image = QImage(image_name)
+                image = QImage(image_name)
             except:
                 QMessageBox.information(self,
                                         'ImagePro',
                                         'Cannot load ' + image_name + '.')
             else:
+                self.image_label.setPixmap(QPixmap.fromImage(image))
                 self.scale_factor = 1.0
-                # change the button status
-                self.select_image_act.setEnabled(False)
-                self.save_mask_act.setEnabled(True)
-                self.close_act.setEnabled(True)
-                self.erase_act.setEnabled(True)
-                self.pen_status = True
-                self.add_toolbar()
-                # load iamge file
-                self.load_data()
-                self.display_data()
+
+                self.fit_to_window_act.setEnabled(True)
+                self.update_actions()
+
+                if not self.fit_to_window_act.isChecked():
+                    self.image_label.adjustSize()
                 
+    def zoom_in(self):
+        """Zoom in image for 1.25 times"""
+        self.scale_image(1.25)
+
+    def zoom_out(self):
+        """Zoom out image for 0.8 times"""
+        self.scale_image(0.8)
+
+    def normal_size(self):
+        self.image_label.adjustSize()
+        self.scale_factor = 1.0
+        self.update_actions()
+
+    def fit_to_window(self):
+        fit_to_window = self.fit_to_window_act.isChecked()
+        self.scrollarea.setWidgetResizable(fit_to_window)
+        if not fit_to_window:
+            self.normal_size()
+
+        self.update_actions()
+
     def about(self):
         """Self-description"""
         QMessageBox.about(self,
                           self.tr("About ImageePro"),
                           self.tr("<p>The <b>ImagePro</b> could draw ROI "
                                   "manually.</p>"))
-
-    def save_mask(self):
-        """Save mask"""
-        mask_path = QFileDialog.getSaveFileName(self,
-                                                'Save mask file',
-                                                QDir.currentPath())
-        if not mask_path.isEmpty():
-            print 'OK'
         
-    def create_action(self):
+    def create_actions(self):
         """Create actions"""
-        # open template action
-        self.open_template_act = QAction(self.tr("&Open standard"), self)
-        self.open_template_act.setShortcut(self.tr("Ctrl+O"))
-        self.connect(self.open_template_act, 
-                     SIGNAL("triggered()"),
-                     self.open_template)
+        # open image file action
+        self.open_act = QAction(self.tr("&Open..."), self)
+        self.open_act.setShortcut(self.tr("Ctrl+O"))
+        self.connect(self.open_act, SIGNAL("triggered()"), self.open)
 
-        # open activation map action
-        self.open_active_act = QAction(self.tr("&Add..."), self)
-        self.open_active_act.setShortcut(self.tr("Ctrl+A"))
-        self.open_active_act.setEnabled(False)
-        self.connect(self.open_active_act,
-                     SIGNAL("triggered()"),
-                     self.open_activation)
-        
-        # remove overlay action
-        self.remove_active_act = QAction(self.tr("&Remove..."), self)
-        self.remove_active_act.setShortcut(self.tr("Ctrl+R"))
-        self.remove_active_act.setEnabled(False)
-        self.connect(self.remove_active_act,
-                     SIGNAL("triggered()"),
-                     self.remove_activation)
-
-        # save mask action
-        self.save_mask_act = QAction(self.tr("&Save mask"), self)
-        self.save_mask_act.setShortcut(self.tr("Ctrl+S"))
-        self.save_mask_act.setEnabled(False)
-        self.connect(self.save_mask_act,
-                     SIGNAL("triggered()"),
-                     self.save_mask)
-
-        # close display action
-        self.close_act = QAction(self.tr("Close"), self)
-        self.close_act.setShortcut(self.tr("Ctrl+W"))
-        self.close_act.setEnabled(False)
-        self.connect(self.close_act,
-                     SIGNAL("triggered()"),
-                     self.close_display)
-        
         # exit action
         self.exit_act = QAction(self.tr("&Quit"), self)
         self.exit_act.setShortcut(self.tr("Ctrl+Q"))
         self.connect(self.exit_act,
                      SIGNAL("triggered()"),
-                     self,
-                     SLOT("close()"))
+                     self.close)
         
+        # zoom in action
+        self.zoom_in_act = QAction(self.tr("Zoom In (25%)"), self)
+        self.zoom_in_act.setShortcut(self.tr("Ctrl++"))
+        self.zoom_in_act.setEnabled(False)
+        self.connect(self.zoom_in_act, SIGNAL("triggered()"), self.zoom_in)
+
+        # zoom out action
+        self.zoom_out_act = QAction(self.tr("Zoom Out (25%)"), self)
+        self.zoom_out_act.setShortcut(self.tr("Ctrl+-"))
+        self.zoom_out_act.setEnabled(False)
+        self.connect(self.zoom_out_act, SIGNAL("triggered()"), self.zoom_out)
+
+        # normal size action
+        self.normal_size_act = QAction(self.tr("Normal &Size"), self)
+        self.normal_size_act.setShortcut(self.tr("Ctrl+S"))
+        self.normal_size_act.setEnabled(False)
+        self.connect(self.normal_size_act,
+                     SIGNAL("triggered()"),
+                     self.normal_size)
+
+        # fit to window action
+        self.fit_to_window_act = QAction(self.tr("&Fit to window"), self)
+        self.fit_to_window_act.setCheckable(True)
+        self.fit_to_window_act.setEnabled(False)
+        self.fit_to_window_act.setShortcut(self.tr("Ctrl+F"))
+        self.connect(self.fit_to_window_act,
+                     SIGNAL("triggered()"),
+                     self.fit_to_window)
+
         # self-description action
         self.about_act = QAction(self.tr("About"), self)
         self.connect(self.about_act, SIGNAL("triggered()"), self.about)
@@ -194,174 +166,54 @@ class MainWindow(QMainWindow):
                      qApp, 
                      SLOT("aboutQt()"))
 
-        # select pen action
-        self.pen_act = QAction(self.tr("pen"), self)
-        self.pen_act.setEnabled(False)
-        self.connect(self.pen_act, SIGNAL("triggered()"),self.select_pen)
-
-        # select eraser action
-        self.erase_act = QAction(self.tr("eraser"), self)
-        self.erase_act.setEnabled(False)
-        self.connect(self.erase_act, SIGNAL("triggered()"), self.select_eraser)
-
-        # create overlap map
-        self.overlap_act = QAction(self.tr("overlap"), self)
-        self.overlap_act.setEnabled(False)
-        self.connect(self.overlap_act, SIGNAL("triggered()"), self.make_overlap)
-
-    def select_pen(self):
-        self.pen_status = True
-        #self.erase_status = False
-        self.pen_act.setEnabled(False)
-        self.erase_act.setEnabled(True)
-        self.change_pen_status()
-
-    def select_eraser(self):
-        self.pen_status = False
-        self.pen_act.setEnabled(True)
-        self.erase_act.setEnabled(False)
-        self.change_pen_status()
-
-    def change_pen_status(self):
-        for index in range(len(self.label_list)):
-            self.label_list[index].pen_status = self.pen_status
-
-    def make_overlap(self):
-        for index in range(len(self.label_list)):
-            self.label_list[index].overlap_active_mask()
-        self.display_data()
-
     def create_menus(self):
         """Create menus"""
         # menu File
         self.file_menu = self.menuBar().addMenu(self.tr("&File"))
-        self.file_menu.addAction(self.open_template_act)
-        self.file_menu.addAction(self.open_active_act)
-        self.file_menu.addAction(self.remove_active_act)
-        self.file_menu.addAction(self.save_mask_act)
+        self.file_menu.addAction(self.open_act)
         self.file_menu.addSeparator()
-        self.file_menu.addAction(self.close_act)
         self.file_menu.addAction(self.exit_act)
+
+        # menu View
+        self.view_menu = self.menuBar().addMenu(self.tr("&View"))
+        self.view_menu.addAction(self.zoom_in_act)
+        self.view_menu.addAction(self.zoom_out_act)
+        self.view_menu.addAction(self.normal_size_act)
+        self.view_menu.addSeparator()
+        self.view_menu.addAction(self.fit_to_window_act)
 
         # menu Help
         self.help_menu = self.menuBar().addMenu(self.tr("&Help"))
         self.help_menu.addAction(self.about_act)
         self.help_menu.addAction(self.about_qt_act)
 
-    def add_toolbar(self):
-        """Create a toolbar and several functional buttons"""
-        # add a spinbox for zoom-scale selection
-        self.spinbox = QSpinBox(self)
-        self.spinbox.setMaximum(200)
-        self.spinbox.setMinimum(50)
-        self.spinbox.setSuffix('%')
-        self.spinbox.setSingleStep(10)
-        self.spinbox.setValue(100)
-        self.connect(self.spinbox, SIGNAL('valueChanged(int)'),
-                     self.refresh_display)
-        
-        # Add a toolbar
-        self.toolbar = QToolBar()
-        # functional buttons list
-        self.toolbar.addWidget(self.spinbox)
-        self.toolbar.addAction(self.pen_act)
-        self.toolbar.addAction(self.erase_act)
-        self.toolbar.addAction(self.overlap_act)
-        self.addToolBar(self.toolbar)
+    def update_actions(self):
+        """Update action status"""
+        self.zoom_in_act.setEnabled(not self.fit_to_window_act.isChecked())
+        self.zoom_out_act.setEnabled(not self.fit_to_window_act.isChecked())
+        self.normal_size_act.setEnabled(not self.fit_to_window_act.isChecked())
 
-    def refresh_display(self, event):
-        """Refresh display as scale_factor changing"""
-        val = self.spinbox.value()
-        self.scale_factor = val / 100.0
-        self.display_data()
+    def scale_image(self, factor):
+        """Display image of spcific size"""
+        self.scale_factor *= factor
+        new_size = self.scale_factor * self.image_label.pixmap().size()
+        self.image_label.resize(new_size)
 
-class ImageLabel(QLabel):
-    """Class ImageLabel provides basic dataset and methods for storing
-    necessary data and volume display.
+        self.adjust_scrollbar(factor)
 
-    """
-    def __init__(self, index, data, max_inten, parent=None):
-        super(ImageLabel, self).__init__(parent)
-        #self.setStyleSheet("QLabel { background-color : red; }")
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.data = np.rot90(data)
-        self.activation = None
-        self.hasActivation = False
-        self.index = index
-        self.mask = self.data * 0 + 1
-        self._max_inten = max_inten
-        self.pen_status = True
-        # customized methods
-        self.mouseMoveEvent = self._make_mask
-        self.scale_factor = 1.0
+        self.zoom_in_act.setEnabled(self.scale_factor < 3.0)
+        self.zoom_out_act.setEnabled(self.scale_factor > 0.333)
 
-    def load_active(self, data):
-        self.activation = np.rot90(data)
-        self.activation = np.abs(np.subtract(self.activation, 1))
-        self.hasActivation = True
+    def adjust_scrollbar(self, factor):
+        # horizontal bar config
+        pre_value = self.scrollarea.horizontalScrollBar().value()
+        page_step = self.scrollarea.horizontalScrollBar().pageStep()
+        new_value = factor * pre_value + ((factor - 1) * page_step/2)
+        self.scrollarea.horizontalScrollBar().setValue(new_value)
 
-    def remove_active(self):
-        self.activation = None
-        self.hasActivation = False
-    
-    def overlap_active_mask(self):
-        if self.hasActivation:
-            temp1 = np.abs(np.subtract(self.activation, 1))
-            temp2 = np.abs(np.subtract(self.mask, 1))
-            temp = np.multiply(temp1, temp2)
-            self.mask = np.abs(np.subtract(temp, 1))
-
-    def _make_image(self):
-        if self.data.max():
-            image = gray2qimage(self.data, normalize=self._max_inten)
-        else:
-            image = gray2qimage(self.data)
-
-        pixmap = QPixmap.fromImage(image)
-        
-        painter = QPainter()
-        painter.begin(pixmap)
-        self._disp_mask(painter)
-        painter.end()
-        return pixmap
-
-    def disp_image(self, scaler=1.0):
-        pixmap = self._make_image()
-        orig_size = pixmap.size()
-        new_pixmap = pixmap.scaled(scaler * orig_size)
-        self.setPixmap(new_pixmap)
-        self.resize(self.pixmap().size())
-        self.scale_factor = scaler
-
-    def _make_mask(self, evt):
-        if self.pen_status:
-            for i in range(-1, 2, 1):
-                for j in range(-1, 2, 1):
-                    try:
-                        self.mask[int(round(evt.y()/self.scale_factor)) + i,
-                                  int(round(evt.x()/self.scale_factor)) + j] = 0
-                    except:
-                        print 'Wrong coordinate'
-        else:
-            for i in range(-1, 2, 1):
-                for j in range(-1, 2, 1):
-                    try:
-                        self.mask[int(round(evt.y()/self.scale_factor)) + i,
-                                  int(round(evt.x()/self.scale_factor)) + j] = 1
-                    except:
-                        print 'Wrong coordinate'
-
-        self.disp_image(scaler=self.scale_factor)
-
-    def _disp_mask(self, painter):
-        painter.backgroundMode = Qt.TransparentMode
-        if self.hasActivation:
-            painter.setPen(Qt.red)
-            painter.setBrush(Qt.red)
-            _active = gray2qimage(self.activation, normalize=0.5)
-            painter.drawPixmap(0, 0, QBitmap.fromImage(_active))
-        painter.setPen(Qt.blue)
-        painter.setBrush(Qt.blue)
-        _mask = gray2qimage(self.mask, normalize=0.5)
-        painter.drawPixmap(0, 0, QBitmap.fromImage(_mask))
+        # vertical bar config
+        pre_value = self.scrollarea.verticalScrollBar().value()
+        page_step = self.scrollarea.verticalScrollBar().pageStep()
+        new_value = factor * pre_value + ((factor - 1) * page_step/2)
+        self.scrollarea.verticalScrollBar().setValue(new_value)
 
