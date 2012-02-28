@@ -130,7 +130,9 @@ class MainWindow(QMainWindow):
         QMessageBox.about(self,
                           self.tr("About ImageePro"),
                           self.tr("<p>The <b>ImagePro</b> could do simple "
-                                  "image processing</p>"))
+                              "image processing.</p>"
+                              "<p><b>Author:</b> Lijie Huang</p>"
+                              "<p><b>Email:</b> huanglijie.seal@gmail.com"))
         
     def create_actions(self):
         """Create actions"""
