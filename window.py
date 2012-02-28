@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
 
         # initial a label for displaying image
         self.image_label = QLabel()
-        self.image_label.setBackgroundRole(QPalette.Base)
+        self.image_label.setBackgroundRole(QPalette.Dark)
         self.image_label.setSizePolicy(QSizePolicy.Ignored,
                                        QSizePolicy.Ignored)
         self.image_label.setScaledContents(True)
@@ -52,7 +52,7 @@ class MainWindow(QMainWindow):
         # set window title
         self.setWindowTitle('ImagePro')
         # set window icon
-        #self.setWindowIcon()
+        self.setWindowIcon(QIcon("./icons/icon.png"))
         self.setCentralWidget(self.scrollarea)
         self.resize(500, 400)
         
@@ -78,12 +78,32 @@ class MainWindow(QMainWindow):
                 self.image_label.setPixmap(QPixmap.fromImage(image))
                 self.scale_factor = 1.0
 
+                self.open_act.setEnabled(False)
+                self.remove_act.setEnabled(True)
                 self.fit_to_window_act.setEnabled(True)
+                self.show_toolbar_act.setEnabled(True)
+                self.show_toolbar_act.setChecked(True)
+                self.show_toolbar()
                 self.update_actions()
 
                 if not self.fit_to_window_act.isChecked():
                     self.image_label.adjustSize()
-                
+
+    def remove(self):
+        """remove current display"""
+        self.image_label.clear()
+        self.image_label.resize(400, 300)
+        self.open_act.setEnabled(True)
+        self.remove_act.setEnabled(False)
+        self.fit_to_window_act.setEnabled(False)
+        self.show_toolbar_act.setEnabled(False)
+        self.show_toolbar_act.setChecked(False)
+        self.show_toolbar()
+        self.fit_to_window_act.setChecked(True)
+        self.update_actions()
+        self.fit_to_window_act.setChecked(False)
+
+
     def zoom_in(self):
         """Zoom in image for 1.25 times"""
         self.scale_image(1.25)
@@ -109,37 +129,61 @@ class MainWindow(QMainWindow):
         """Self-description"""
         QMessageBox.about(self,
                           self.tr("About ImageePro"),
-                          self.tr("<p>The <b>ImagePro</b> could draw ROI "
-                                  "manually.</p>"))
+                          self.tr("<p>The <b>ImagePro</b> could do simple "
+                                  "image processing</p>"))
         
     def create_actions(self):
         """Create actions"""
         # open image file action
-        self.open_act = QAction(self.tr("&Open..."), self)
+        self.open_act = QAction(QIcon("./icons/open.png"),
+                                self.tr("&Open..."),
+                                self)
         self.open_act.setShortcut(self.tr("Ctrl+O"))
         self.connect(self.open_act, SIGNAL("triggered()"), self.open)
 
+        # remove image action
+        self.remove_act = QAction(self.tr("&Remove..."), self)
+        self.remove_act.setShortcut(self.tr("Ctrl+R"))
+        self.remove_act.setEnabled(False)
+        self.connect(self.remove_act, SIGNAL("triggered()"), self.remove)
+
         # exit action
-        self.exit_act = QAction(self.tr("&Quit"), self)
+        self.exit_act = QAction(QIcon("./icons/quit.png"),
+                                self.tr("&Quit"),
+                                self)
         self.exit_act.setShortcut(self.tr("Ctrl+Q"))
         self.connect(self.exit_act,
                      SIGNAL("triggered()"),
                      self.close)
-        
+
+        # show toolbar action
+        self.show_toolbar_act = QAction(self.tr("toolbar"), self)
+        self.show_toolbar_act.setCheckable(True)
+        self.show_toolbar_act.setEnabled(False)
+        self.connect(self.show_toolbar_act,
+                     SIGNAL("triggered()"),
+                     self.show_toolbar)
+
         # zoom in action
-        self.zoom_in_act = QAction(self.tr("Zoom In (25%)"), self)
+        self.zoom_in_act = QAction(QIcon("./icons/zoom_in.png"),
+                                   self.tr("Zoom In (25%)"),
+                                   self)
         self.zoom_in_act.setShortcut(self.tr("Ctrl++"))
         self.zoom_in_act.setEnabled(False)
         self.connect(self.zoom_in_act, SIGNAL("triggered()"), self.zoom_in)
 
         # zoom out action
-        self.zoom_out_act = QAction(self.tr("Zoom Out (25%)"), self)
+        self.zoom_out_act = QAction(QIcon("./icons/zoom_out.png"),
+                                    self.tr("Zoom Out (25%)"),
+                                    self)
         self.zoom_out_act.setShortcut(self.tr("Ctrl+-"))
         self.zoom_out_act.setEnabled(False)
         self.connect(self.zoom_out_act, SIGNAL("triggered()"), self.zoom_out)
 
         # normal size action
-        self.normal_size_act = QAction(self.tr("Normal &Size"), self)
+        self.normal_size_act = QAction(QIcon("./icons/normal_size.png"),
+                                       self.tr("Normal &Size"),
+                                       self)
         self.normal_size_act.setShortcut(self.tr("Ctrl+S"))
         self.normal_size_act.setEnabled(False)
         self.connect(self.normal_size_act,
@@ -147,7 +191,9 @@ class MainWindow(QMainWindow):
                      self.normal_size)
 
         # fit to window action
-        self.fit_to_window_act = QAction(self.tr("&Fit to window"), self)
+        self.fit_to_window_act = QAction(QIcon("./icons/full_screen.png"),
+                                         self.tr("&Fit to window"),
+                                         self)
         self.fit_to_window_act.setCheckable(True)
         self.fit_to_window_act.setEnabled(False)
         self.fit_to_window_act.setShortcut(self.tr("Ctrl+F"))
@@ -171,21 +217,42 @@ class MainWindow(QMainWindow):
         # menu File
         self.file_menu = self.menuBar().addMenu(self.tr("&File"))
         self.file_menu.addAction(self.open_act)
+        self.file_menu.addAction(self.remove_act)
         self.file_menu.addSeparator()
         self.file_menu.addAction(self.exit_act)
 
         # menu View
         self.view_menu = self.menuBar().addMenu(self.tr("&View"))
-        self.view_menu.addAction(self.zoom_in_act)
-        self.view_menu.addAction(self.zoom_out_act)
-        self.view_menu.addAction(self.normal_size_act)
-        self.view_menu.addSeparator()
-        self.view_menu.addAction(self.fit_to_window_act)
+        self.view_menu.addAction(self.show_toolbar_act)
+
+        # menu Tool
+        self.tool_menu = self.menuBar().addMenu(self.tr("&Tool"))
+        self.tool_menu.addAction(self.zoom_in_act)
+        self.tool_menu.addAction(self.zoom_out_act)
+        self.tool_menu.addAction(self.normal_size_act)
+        self.tool_menu.addSeparator()
+        self.tool_menu.addAction(self.fit_to_window_act)
 
         # menu Help
         self.help_menu = self.menuBar().addMenu(self.tr("&Help"))
         self.help_menu.addAction(self.about_act)
         self.help_menu.addAction(self.about_qt_act)
+
+    def create_toolbar(self):
+        """Create toolbar"""
+        self.toolbar = QToolBar()
+        self.toolbar.addAction(self.zoom_in_act)
+        self.toolbar.addAction(self.zoom_out_act)
+        self.toolbar.addAction(self.normal_size_act)
+        self.toolbar.addAction(self.fit_to_window_act)
+
+    def show_toolbar(self):
+        """change toolbar visiability"""
+        if self.show_toolbar_act.isChecked():
+            self.create_toolbar()
+            self.addToolBar(self.toolbar)
+        else:
+            self.removeToolBar(self.toolbar)
 
     def update_actions(self):
         """Update action status"""
