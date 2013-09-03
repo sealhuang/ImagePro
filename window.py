@@ -35,7 +35,10 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         """Initalize an instance of MainWindow"""
         # Inherited from QMainWindow
-        super(MainWindow, self).__init__(parent)
+        if sys.platform == 'darwin':
+            super(MainWindow, self).__init__(parent, Qt.MacWindowToolBarButtonHint)
+        else:
+            super(MainWindow, self).__init__(parent)
 
         # initial a label for displaying image
         self.image_label = QLabel()
